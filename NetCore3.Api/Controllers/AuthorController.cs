@@ -1,10 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using NetCore3.Api.Application.Contracts;
+using NetCore3.Api.Application.Contracts.Helpers;
+using NetCore3.Api.Application.Helpers;
 using NetCore3.Api.Application.QueryParameters;
+using NetCore3.Api.DataAccess.Entities;
 using NetCore3.Api.Domain.Models.Author;
 using NetCore3.Api.Helpers;
 
@@ -16,18 +18,38 @@ namespace NetCore3.Api.Controllers
     public class AuthorController : ControllerBase
     {
         private readonly IAuthorService _authorService;
+        private readonly IPropertyMappingService _propertyMappingService;
+        private readonly IPropertyCheckerService _propertyCheckerService;
 
-        public AuthorController(IAuthorService authorService)
+        public AuthorController(IAuthorService authorService, 
+            IPropertyMappingService propertyMappingService, 
+            IPropertyCheckerService propertyCheckerService)
         {
             _authorService = authorService ??
-                throw new ArgumentNullException(nameof(authorService)); 
+                throw new ArgumentNullException(nameof(authorService));
+            _propertyMappingService = propertyMappingService ??
+                throw new ArgumentNullException(nameof(propertyMappingService));
+            _propertyCheckerService = propertyCheckerService ??
+                throw new ArgumentNullException(nameof(propertyCheckerService)); 
+
         }
 
         [HttpGet(Name = "GetAuthors")]
         [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
-        public async Task<ActionResult<IEnumerable<AuthorModel>>> GetAuthors(
+        public async Task<ActionResult> GetAuthors(
             [FromQuery] AuthorQueryParameters queryParameters)
         {
+
+            if (!_propertyMappingService.ValidMappingExistFor<AuthorModel, Author>(queryParameters.OrderBy))
+            {
+                return BadRequest(); 
+            }
+
+            if (!_propertyCheckerService.TypeHasProperties<AuthorModel>(queryParameters.Fields))
+            {
+                return BadRequest(); 
+            }
+
             var authors = await _authorService.GetAuthors(queryParameters)
                 .ConfigureAwait(false);
 
@@ -50,13 +72,18 @@ namespace NetCore3.Api.Controllers
             Response.Headers.Add("X-Pagination",
                 JsonSerializer.Serialize(paginationMetadata)); 
 
-            return Ok(authors); 
+            return Ok(authors.ShapeEnumerableData(queryParameters.Fields)); 
         }
 
         [HttpGet("{authorId}", Name = "GetAuthor")]
         [ApiConventionMethod(typeof(DefaultApiConventions), nameof(DefaultApiConventions.Get))]
-        public async Task<ActionResult<AuthorModel>> GetAuthor(Guid authorId)
+        public async Task<ActionResult> GetAuthor(Guid authorId, string fields)
         {
+            if (!_propertyCheckerService.TypeHasProperties<AuthorModel>(fields))
+            {
+                return BadRequest();
+            }
+
             var author = await _authorService.GetAuthor(authorId)
                 .ConfigureAwait(false); 
 
@@ -65,7 +92,7 @@ namespace NetCore3.Api.Controllers
                 return NotFound();
             }
 
-            return Ok(author); 
+            return Ok(author.ShapeData(fields)); 
         }
 
         [HttpPost]
@@ -108,6 +135,8 @@ namespace NetCore3.Api.Controllers
                     return Url.Link("GetAuthors",
                         new
                         {
+                            fields = queryParameters.Fields, 
+                            orderBy = queryParameters.OrderBy,
                             pageNumber = queryParameters.PageNumber - 1,
                             pageSize = queryParameters.PageSize,
                             job = queryParameters.Job,
@@ -117,6 +146,8 @@ namespace NetCore3.Api.Controllers
                     return Url.Link("GetAuthors",
                         new
                         {
+                            fields = queryParameters.Fields,
+                            orderBy = queryParameters.OrderBy, 
                             pageNumber = queryParameters.PageNumber + 1,
                             pageSize = queryParameters.PageSize,
                             job = queryParameters.Job,
@@ -126,6 +157,8 @@ namespace NetCore3.Api.Controllers
                     return Url.Link("GetAuthors",
                         new
                         {
+                            fields = queryParameters.Fields,
+                            orderBy = queryParameters.OrderBy,
                             pageNumber = queryParameters.PageNumber,
                             pageSize = queryParameters.PageSize,
                             job = queryParameters.Job,

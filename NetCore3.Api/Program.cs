@@ -23,8 +23,8 @@ namespace NetCore3.Api
                 try
                 {
                     var context = scope.ServiceProvider.GetService<MoocDbContext>();
-                    //context.Database.EnsureDeleted();
-                    //context.Database.Migrate(); 
+                    context.Database.EnsureDeleted();
+                    context.Database.Migrate(); 
                 }
                 catch (Exception ex)
                 {

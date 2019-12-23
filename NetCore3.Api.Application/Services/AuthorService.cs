@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using NetCore3.Api.Application.Contracts;
+using NetCore3.Api.Application.Contracts.Helpers;
 using NetCore3.Api.Application.Helpers;
 using NetCore3.Api.Application.QueryParameters;
 using NetCore3.Api.DataAccess.Contracts;
@@ -69,14 +70,8 @@ namespace NetCore3.Api.Application.Services
 
             if (!string.IsNullOrWhiteSpace(queryParameters.OrderBy))
             {
-                if(queryParameters.OrderBy.ToLowerInvariant() == "name")
-                {
-                    authorsCollection = authorsCollection
-                        .OrderBy(x => x.Name)
-                        .ThenBy(x => x.Surname); 
-                }
-
-
+                var authorPropertyMappingDictionary = _propertyMappingService.GetPropertyMapping<AuthorModel, Author>(); 
+                authorsCollection = authorsCollection.AsQueryable().ApplySort(queryParameters.OrderBy, authorPropertyMappingDictionary); 
             }
 
             var collectionToReturn = _mapper.Map<IEnumerable<AuthorModel>>(authorsCollection);

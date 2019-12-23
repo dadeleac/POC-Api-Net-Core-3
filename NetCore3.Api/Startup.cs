@@ -69,8 +69,6 @@ namespace NetCore3.Api
                 options.UseSqlServer(@"Server=(localdb)\mssqllocaldb;Database=CourseMoocDB;Trusted_Connection=True;");
             });
 
-            //IoCConfig.RegisterIoC(services);
-            //SwaggerConfig.AddSwaggerConfig(services);
             services.AddRegisterIoC(); 
             services.AddSwaggerConfig();
             services.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies()); 

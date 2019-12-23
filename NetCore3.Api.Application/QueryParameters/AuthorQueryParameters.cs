@@ -20,5 +20,6 @@ namespace NetCore3.Api.Application.QueryParameters
         }
 
         public string OrderBy { get; set; } = "Name";
+        public string Fields { get; set; }
     }
 }
